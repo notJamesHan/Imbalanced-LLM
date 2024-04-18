@@ -13,3 +13,32 @@ Classification of Imbalanced Data with LLM
 
 - Credit Card: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 - Heart Attack: https://www.kaggle.com/datasets/rashikrahmanpritom/heart-attack-analysis-prediction-dataset
+
+## Solve Error
+
+1. use python3.8 for t-few conda env
+2. Run this in Linux
+3. pip install --upgrade "protobuf<=3.20.1"
+4. Download HuggingFace Cli to use the Token
+
+`AttributeError: module 'distutils' has no attribute 'version'`
+5. [Fix](https://github.com/pytorch/pytorch/issues/69894#issuecomment-1080635462)
+6. `pip install typing-extensions` dropped support for 3.8, use 3.10
+
+
+## This is for colab based.
+```
+conda create -n tfew python==3.10
+conda activate tfew
+
+pip install fsspec==2021.05.0 # exists in colab
+pip install urllib3==1.26.6 # exists in colab
+pip install importlib-metadata==4.13.0 # exists in colab
+pip install scikit-learn # exists in colab 
+
+pip install --use-deprecated=legacy-resolver  -r requirements.txt
+
+
+# If promptsource failed
+!pip install git+https://github.com/bigscience-workshop/promptsource.git
+```

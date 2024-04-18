@@ -1,0 +1,13 @@
+# Colab uses 12.2, python 10
+
+datasets==2.0.0
+pytorch-lightning==1.5.8
+promptsource
+
+# torch==1.10.1+cu122
+# transformers==4.15.0
+# torchmetrics==0.6.2
+# psutil==5.9.0
+# deepspeed==0.5.10
+# sentencepiece==0.1.96
+# scipy
