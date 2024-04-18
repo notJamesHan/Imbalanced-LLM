@@ -28,7 +28,7 @@ class EncoderDecoder(LightningModule):
 
         # self.use_deepspeed = self.config.compute_strategy.startswith("deepspeed")
         # self.use_ddp = self.config.compute_strategy.startswith("ddp")
-        self.load_model()
+        # self.load_model() # When first run comment it, then uncomment - James
 
         self._last_global_step_saved = -1
 
@@ -283,7 +283,7 @@ class EncoderDecoder(LightningModule):
 
         return metrics
 
-    def validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self, outputs): # Changed for updating "pytorch_lightning" - James
         metrics = self.validation_test_shared_preparation(outputs, self.config.dev_score_file)
 
         # Consider best validation performance based on AUC

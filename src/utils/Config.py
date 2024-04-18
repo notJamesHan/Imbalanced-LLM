@@ -34,7 +34,7 @@ class Config(object):
         self.cleaned_answer_choices_b77 = False
 
         # Compute backend configs
-        self.compute_precision = "bf16"
+        self.compute_precision = "bf16-mixed"
         self.compute_strategy = "none"
 
         # Trainer configs
