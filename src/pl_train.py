@@ -23,7 +23,7 @@ def get_transformer(config):
     # Using T5 on force - James
     tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
     model = T5ForConditionalGeneration.from_pretrained(
-        "google/flan-t5-small", device_map="auto", load_in_8bit=True
+        "google/flan-t5-small", device_map="auto", torch_dtype=torch.float16
     )
 
     # tokenizer = AutoTokenizer.from_pretrained(config.origin_model)

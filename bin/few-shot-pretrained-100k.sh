@@ -63,7 +63,7 @@ do
         fi
       fi
 
-      for seed in 42 #1024 0 1 32
+      for seed in 42 1024 0 1 32
       do
         CUDA_VISIBLE_DEVICES=${cuda_device} CONFIG_PATH=/content/drive/MyDrive/Colab\ Notebooks/TabLLM/configs HF_HOME=/content/drive/MyDrive/Colab\ Notebooks/TabLLM/.cache/huggingface \
         python -m src.pl_train -c ${model}.json+ia3.json+global.json -k dataset=${dataset} load_weight="pretrained_checkpoints/${model}_ia3_finish.pt" num_steps=${num_steps} num_shot=${num_shot} \

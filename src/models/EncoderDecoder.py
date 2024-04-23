@@ -31,10 +31,8 @@ class EncoderDecoder(L.LightningModule):
         self.best_eval_model_metric = [-1]
         self.best_eval_global_step = -1
 
-        self.training_step_outputs = []   # save outputs in each batch to compute metric overall epoch
-        self.training_step_targets = []   # save targets in each batch to compute metric overall epoch
-        self.val_step_outputs = []        # save outputs in each batch to compute metric overall epoch
-        self.val_step_targets = []        # save targets in each batch to compute metric overall epoch
+        self.validation_output = []
+        self.test_output = []
 
     def training_step(self, batch, batch_idx):
 
@@ -77,9 +75,8 @@ class EncoderDecoder(L.LightningModule):
                 decoder_input_ids=decoder_input_ids,
                 decoder_attention_mask=decoder_attention_mask,
             )
-            print("I am here 1")
 
-            model_output.logits.requires_grad = True # Requires GRAD - James
+            model_output.logits.requires_grad = True  # Requires GRAD - James
             choices_scores = (
                 F.cross_entropy(
                     model_output.logits.flatten(0, 1),
@@ -95,7 +92,7 @@ class EncoderDecoder(L.LightningModule):
                     (choices_ids != self.tokenizer.pad_token_id).sum(dim=-1),
                     self.config.length_norm,
                 )
-            print("I am here 2")
+
             lm_loss = F.cross_entropy(
                 model_output.logits.view(
                     bs, num_choices, *model_output.logits.size()[1:]
@@ -106,14 +103,13 @@ class EncoderDecoder(L.LightningModule):
             tensorboard_logs = {"lm_loss": lm_loss.item()}
             # I think mc loss corresponds to the LN-loss which is a softmax-cross entropy loss for length normalized
             # output sequences
-            print("I am here 3")
+
             if self.config.mc_loss > 0:
                 mc_loss = F.cross_entropy(-choices_scores, labels)
                 tensorboard_logs["mc_loss"] = mc_loss.item()
             else:
                 mc_loss = 0.0
 
-            print("I am here 4")
             if self.config.unlikely_loss > 0:
                 cand_loglikely = -F.cross_entropy(
                     model_output.logits.flatten(0, 1),
@@ -165,10 +161,6 @@ class EncoderDecoder(L.LightningModule):
         if self.global_step % self.config.save_step_interval == 0:
             self.save_model()
 
-        # --> HERE STEP 2 <--
-        self.training_step_outputs.extend(y_pred)
-        self.training_step_targets.extend(y_true)
-
         return loss
 
     def predict(self, batch):
@@ -218,8 +210,8 @@ class EncoderDecoder(L.LightningModule):
                 decoder_input_ids=decoder_input_ids,
                 decoder_attention_mask=decoder_attention_mask,
             )
-            print("I am here 5")
-            model_output.logits.requires_grad = True # Requires GRAD - James
+
+            model_output.logits.requires_grad = True  # Requires GRAD - James
             choices_scores = (
                 F.cross_entropy(
                     model_output.logits.flatten(0, 1),
@@ -291,8 +283,8 @@ class EncoderDecoder(L.LightningModule):
                     decoder_input_ids=decoder_input_ids,
                     decoder_attention_mask=decoder_attention_mask,
                 )
-                print("I am here 6")
-                model_output.logits.requires_grad = True # Requires GRAD - James
+
+                model_output.logits.requires_grad = True  # Requires GRAD - James
                 choices_scores = (
                     F.cross_entropy(
                         model_output.logits.flatten(0, 1),
@@ -338,6 +330,7 @@ class EncoderDecoder(L.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         batch_output = self.predict(batch)
+        self.validation_output.append(batch_output)
         return batch_output
 
     def validation_test_shared_preparation(self, outputs, output_file):
@@ -375,15 +368,11 @@ class EncoderDecoder(L.LightningModule):
 
         return metrics
 
-    def on_validation_epoch_end(self):  
-        
-        ## F1 Macro all epoch saving outputs and target per batch
-        val_all_outputs = self.val_step_outputs
-        val_all_targets = self.val_step_targets
+    def on_validation_epoch_end(self):
 
         # Changed for updating "pytorch_lightning" - James
         metrics = self.validation_test_shared_preparation(
-            outputs, self.config.dev_score_file
+            self.validation_output, self.config.dev_score_file
         )
 
         # Consider best validation performance based on AUC
@@ -398,19 +387,16 @@ class EncoderDecoder(L.LightningModule):
 
         self.save_model()
 
-        # free up the memory
-        # --> HERE STEP 3 <--
-        self.val_step_outputs.clear()
-        self.val_step_targets.clear()
         return metrics
 
     def test_step(self, batch, batch_idx):
         batch_output = self.predict(batch)
+        self.test_output.append(batch_output)
         return batch_output
 
-    def test_epoch_end(self, outputs):
+    def test_epoch_end(self):
         metrics = self.validation_test_shared_preparation(
-            outputs, self.config.test_score_file
+            self.test_output, self.config.test_score_file
         )
         return metrics
 
