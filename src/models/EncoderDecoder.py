@@ -7,8 +7,6 @@ from pytorch_lightning import LightningModule
 from src.utils.get_optimizer import get_optimizer
 from src.utils.get_scheduler import get_scheduler
 from statistics import mean
-# from deepspeed.utils import zero_to_fp32
-# from .fishmask import fishmask_plugin_on_init, fishmask_plugin_on_optimizer_step, fishmask_plugin_on_end
 
 
 class EncoderDecoder(LightningModule):
@@ -26,8 +24,6 @@ class EncoderDecoder(LightningModule):
         self.model = transformer
         self.dataset_reader = dataset_reader
 
-        # self.use_deepspeed = self.config.compute_strategy.startswith("deepspeed")
-        # self.use_ddp = self.config.compute_strategy.startswith("ddp")
         # self.load_model() # When first run comment it, then uncomment - James
 
         self._last_global_step_saved = -1
@@ -35,26 +31,40 @@ class EncoderDecoder(LightningModule):
         self.best_eval_model_metric = [-1]
         self.best_eval_global_step = -1
 
-        # if self.config.fishmask_mode is not None:
-        #     fishmask_plugin_on_init(self)
-
     def training_step(self, batch, batch_idx):
-        # if self.config.model_modifier == "intrinsic":
-        #     from .intrinsic import intrinsic_plugin_on_step
-        #     intrinsic_plugin_on_step(self)
 
         if self.config.mc_loss > 0 or self.config.unlikely_loss > 0:
-            input_ids, choices_ids, labels = batch["input_ids"], batch["answer_choices_ids"], batch["labels"]
+            input_ids, choices_ids, labels = (
+                batch["input_ids"],
+                batch["answer_choices_ids"],
+                batch["labels"],
+            )
             bs, num_choices = choices_ids.size()[:2]
 
             flat_choices_ids = choices_ids.flatten(0, 1)
-            attention_mask = (input_ids != self.tokenizer.pad_token_id).float()  # [bs, max_seq_len]
-            encoder_hidden_states = self.model.encoder(input_ids=input_ids, attention_mask=attention_mask)[0]
-            encoder_hidden_states = encoder_hidden_states.unsqueeze(dim=1).repeat(1, num_choices, 1, 1).flatten(0, 1)
-            attention_mask = attention_mask.unsqueeze(dim=1).repeat(1, num_choices, 1).flatten(0, 1)
-            decoder_input_ids = torch.cat([torch.zeros_like(flat_choices_ids[:, :1]), flat_choices_ids[:, :-1]], dim=1)
+            attention_mask = (
+                input_ids != self.tokenizer.pad_token_id
+            ).float()  # [bs, max_seq_len]
+            encoder_hidden_states = self.model.encoder(
+                input_ids=input_ids, attention_mask=attention_mask
+            )[0]
+            encoder_hidden_states = (
+                encoder_hidden_states.unsqueeze(dim=1)
+                .repeat(1, num_choices, 1, 1)
+                .flatten(0, 1)
+            )
+            attention_mask = (
+                attention_mask.unsqueeze(dim=1).repeat(1, num_choices, 1).flatten(0, 1)
+            )
+            decoder_input_ids = torch.cat(
+                [torch.zeros_like(flat_choices_ids[:, :1]), flat_choices_ids[:, :-1]],
+                dim=1,
+            )
             decoder_attention_mask = (decoder_input_ids == decoder_input_ids).float()
-            lm_target = flat_choices_ids - 100 * (flat_choices_ids == self.tokenizer.pad_token_id).long()
+            lm_target = (
+                flat_choices_ids
+                - 100 * (flat_choices_ids == self.tokenizer.pad_token_id).long()
+            )
 
             model_output = self.model(
                 attention_mask=attention_mask,
@@ -63,19 +73,24 @@ class EncoderDecoder(LightningModule):
                 decoder_attention_mask=decoder_attention_mask,
             )
             choices_scores = (
-                F.cross_entropy(model_output.logits.flatten(0, 1), lm_target.flatten(0, 1), reduction="none")
+                F.cross_entropy(
+                    model_output.logits.flatten(0, 1),
+                    lm_target.flatten(0, 1),
+                    reduction="none",
+                )
                 .view(bs, num_choices, -1)
                 .sum(dim=-1)
             )
             # Length normalization
             if self.config.length_norm > 0:
                 choices_scores = choices_scores / torch.pow(
-                    (choices_ids != self.tokenizer.pad_token_id).sum(dim=-1), self.config.length_norm
+                    (choices_ids != self.tokenizer.pad_token_id).sum(dim=-1),
+                    self.config.length_norm,
                 )
             lm_loss = F.cross_entropy(
-                model_output.logits.view(bs, num_choices, *model_output.logits.size()[1:])[range(bs), labels].flatten(
-                    0, 1
-                ),
+                model_output.logits.view(
+                    bs, num_choices, *model_output.logits.size()[1:]
+                )[range(bs), labels].flatten(0, 1),
                 lm_target.view(bs, num_choices, -1)[range(bs), labels].flatten(0, 1),
             )
 
@@ -90,21 +105,34 @@ class EncoderDecoder(LightningModule):
 
             if self.config.unlikely_loss > 0:
                 cand_loglikely = -F.cross_entropy(
-                    model_output.logits.flatten(0, 1), lm_target.flatten(0, 1), reduction="none"
+                    model_output.logits.flatten(0, 1),
+                    lm_target.flatten(0, 1),
+                    reduction="none",
                 ).view(bs, num_choices, -1)
                 cand_loglikely += (lm_target < 0).view(bs, num_choices, -1) * -100
                 cand_loglikely[range(bs), labels] = -100
-                unlikely_loss = -torch.log(1 - torch.exp(cand_loglikely) + 1e-2).sum() / (cand_loglikely != -100).sum()
+                unlikely_loss = (
+                    -torch.log(1 - torch.exp(cand_loglikely) + 1e-2).sum()
+                    / (cand_loglikely != -100).sum()
+                )
                 tensorboard_logs["unlikely_loss"] = unlikely_loss.item()
             else:
                 unlikely_loss = 0.0
 
-            loss = lm_loss + mc_loss * self.config.mc_loss + unlikely_loss * self.config.unlikely_loss
+            loss = (
+                lm_loss
+                + mc_loss * self.config.mc_loss
+                + unlikely_loss * self.config.unlikely_loss
+            )
             tensorboard_logs["loss"] = loss.item()
         else:
             input_ids, target_ids = batch["input_ids"], batch["target_ids"]
-            attention_mask = (input_ids != self.tokenizer.pad_token_id).float()  # [bs, max_seq_len]
-            lm_labels = target_ids + -100 * (target_ids == self.tokenizer.pad_token_id).long()  # [bs, max_seq_len]
+            attention_mask = (
+                input_ids != self.tokenizer.pad_token_id
+            ).float()  # [bs, max_seq_len]
+            lm_labels = (
+                target_ids + -100 * (target_ids == self.tokenizer.pad_token_id).long()
+            )  # [bs, max_seq_len]
             decoder_input_ids = torch.cat(
                 [torch.zeros_like(lm_labels[:, :1]), target_ids[:, :-1]], dim=1
             )  # [bs, max_seq_len]
@@ -135,21 +163,39 @@ class EncoderDecoder(LightningModule):
         :param pet:
         :return:
         """
-        if self.config.model_modifier == "intrinsic":
-            intrinsic_plugin_on_step(self)
 
-        input_ids, choices_ids, labels = batch["input_ids"], batch["answer_choices_ids"], batch["labels"]
+        input_ids, choices_ids, labels = (
+            batch["input_ids"],
+            batch["answer_choices_ids"],
+            batch["labels"],
+        )
 
         if not self.config.split_option_at_inference:
             bs, num_choices = choices_ids.size()[:2]
             flat_choices_ids = choices_ids.flatten(0, 1)
-            attention_mask = (input_ids != self.tokenizer.pad_token_id).float()  # [bs, max_seq_len]
-            encoder_hidden_states = self.model.encoder(input_ids=input_ids, attention_mask=attention_mask)[0]
-            encoder_hidden_states = encoder_hidden_states.unsqueeze(dim=1).repeat(1, num_choices, 1, 1).flatten(0, 1)
-            attention_mask = attention_mask.unsqueeze(dim=1).repeat(1, num_choices, 1).flatten(0, 1)
-            decoder_input_ids = torch.cat([torch.zeros_like(flat_choices_ids[:, :1]), flat_choices_ids[:, :-1]], dim=1)
+            attention_mask = (
+                input_ids != self.tokenizer.pad_token_id
+            ).float()  # [bs, max_seq_len]
+            encoder_hidden_states = self.model.encoder(
+                input_ids=input_ids, attention_mask=attention_mask
+            )[0]
+            encoder_hidden_states = (
+                encoder_hidden_states.unsqueeze(dim=1)
+                .repeat(1, num_choices, 1, 1)
+                .flatten(0, 1)
+            )
+            attention_mask = (
+                attention_mask.unsqueeze(dim=1).repeat(1, num_choices, 1).flatten(0, 1)
+            )
+            decoder_input_ids = torch.cat(
+                [torch.zeros_like(flat_choices_ids[:, :1]), flat_choices_ids[:, :-1]],
+                dim=1,
+            )
             decoder_attention_mask = (decoder_input_ids == decoder_input_ids).float()
-            lm_target = flat_choices_ids - 100 * (flat_choices_ids == self.tokenizer.pad_token_id).long()
+            lm_target = (
+                flat_choices_ids
+                - 100 * (flat_choices_ids == self.tokenizer.pad_token_id).long()
+            )
 
             model_output = self.model(
                 attention_mask=attention_mask,
@@ -158,14 +204,19 @@ class EncoderDecoder(LightningModule):
                 decoder_attention_mask=decoder_attention_mask,
             )
             choices_scores = (
-                F.cross_entropy(model_output.logits.flatten(0, 1), lm_target.flatten(0, 1), reduction="none")
+                F.cross_entropy(
+                    model_output.logits.flatten(0, 1),
+                    lm_target.flatten(0, 1),
+                    reduction="none",
+                )
                 .view(bs, num_choices, -1)
                 .sum(dim=-1)
             )
             # Length normalization
             if self.config.length_norm > 0:
                 choices_scores = choices_scores / torch.pow(
-                    (choices_ids != self.tokenizer.pad_token_id).sum(dim=-1), self.config.length_norm
+                    (choices_ids != self.tokenizer.pad_token_id).sum(dim=-1),
+                    self.config.length_norm,
                 )
             pred_score, prediction = choices_scores.min(dim=1)
 
@@ -181,20 +232,41 @@ class EncoderDecoder(LightningModule):
             for half_choice_ids in [first_half_choice_ids, second_half_choice_ids]:
                 half_num_choices = half_choice_ids.shape[1]
 
-                flat_choices_ids = half_choice_ids.flatten(0, 1)  # [bs*num_choices, choice_len]
+                flat_choices_ids = half_choice_ids.flatten(
+                    0, 1
+                )  # [bs*num_choices, choice_len]
 
-                attention_mask = (input_ids != self.tokenizer.pad_token_id).float()  # [bs, max_seq_len]
-                encoder_hidden_states = self.model.encoder(input_ids=input_ids, attention_mask=attention_mask)[0]
+                attention_mask = (
+                    input_ids != self.tokenizer.pad_token_id
+                ).float()  # [bs, max_seq_len]
+                encoder_hidden_states = self.model.encoder(
+                    input_ids=input_ids, attention_mask=attention_mask
+                )[0]
                 encoder_hidden_states = (
-                    encoder_hidden_states.unsqueeze(dim=1).repeat(1, half_num_choices, 1, 1).flatten(0, 1)
+                    encoder_hidden_states.unsqueeze(dim=1)
+                    .repeat(1, half_num_choices, 1, 1)
+                    .flatten(0, 1)
                 )
-                attention_mask = attention_mask.unsqueeze(dim=1).repeat(1, half_num_choices, 1).flatten(0, 1)
+                attention_mask = (
+                    attention_mask.unsqueeze(dim=1)
+                    .repeat(1, half_num_choices, 1)
+                    .flatten(0, 1)
+                )
 
                 decoder_input_ids = torch.cat(
-                    [torch.zeros_like(flat_choices_ids[:, :1]), flat_choices_ids[:, :-1]], dim=1
+                    [
+                        torch.zeros_like(flat_choices_ids[:, :1]),
+                        flat_choices_ids[:, :-1],
+                    ],
+                    dim=1,
                 )
-                decoder_attention_mask = (decoder_input_ids == decoder_input_ids).float()
-                lm_target = flat_choices_ids - 100 * (flat_choices_ids == self.tokenizer.pad_token_id).long()
+                decoder_attention_mask = (
+                    decoder_input_ids == decoder_input_ids
+                ).float()
+                lm_target = (
+                    flat_choices_ids
+                    - 100 * (flat_choices_ids == self.tokenizer.pad_token_id).long()
+                )
 
                 model_output = self.model(
                     attention_mask=attention_mask,
@@ -203,13 +275,18 @@ class EncoderDecoder(LightningModule):
                     decoder_attention_mask=decoder_attention_mask,
                 )
                 choices_scores = (
-                    F.cross_entropy(model_output.logits.flatten(0, 1), lm_target.flatten(0, 1), reduction="none")
+                    F.cross_entropy(
+                        model_output.logits.flatten(0, 1),
+                        lm_target.flatten(0, 1),
+                        reduction="none",
+                    )
                     .view(bs, half_num_choices, -1)
                     .sum(dim=-1)
                 )
                 if self.config.length_norm > 0:
                     choices_scores = choices_scores / torch.pow(
-                        (half_choice_ids != self.tokenizer.pad_token_id).sum(dim=-1), self.config.length_norm
+                        (half_choice_ids != self.tokenizer.pad_token_id).sum(dim=-1),
+                        self.config.length_norm,
                     )
 
                 all_choice_scores.append(choices_scores)
@@ -221,7 +298,9 @@ class EncoderDecoder(LightningModule):
 
         # Infer "pseudo" probs for choices
         probs = torch.exp(-choices_scores)
-        probs = torch.divide(probs, (torch.sum(probs, dim=-1)).repeat(num_choices, 1).permute(1, 0))
+        probs = torch.divide(
+            probs, (torch.sum(probs, dim=-1)).repeat(num_choices, 1).permute(1, 0)
+        )
 
         # Careful choices_scores are changed here (so that label scores are replaced by maximum)
         # Choices scores are length normalized, but seems fine since they are also using them for predictions.
@@ -243,12 +322,6 @@ class EncoderDecoder(LightningModule):
         return batch_output
 
     def validation_test_shared_preparation(self, outputs, output_file):
-        # exchange outputs between processes
-        # if self.use_deepspeed or self.use_ddp:
-        #     gathered_outputs = [[] for _ in range(dist.get_world_size())]
-        #     dist.all_gather_object(gathered_outputs, outputs)
-        #     if dist.get_rank() == 0:
-        #         outputs = [batch_output for outputs in gathered_outputs for batch_output in outputs]
 
         if not (self.use_deepspeed or self.use_ddp) or dist.get_rank() == 0:
             # let rank 0 collect all outputs
@@ -269,7 +342,7 @@ class EncoderDecoder(LightningModule):
             # compute and log results
             metrics = self.dataset_reader.compute_metric(accumulated)
             # Append number of best steps to metrics
-            metrics = {**metrics, 'num_steps': self.best_eval_global_step}
+            metrics = {**metrics, "num_steps": self.best_eval_global_step}
             for key, value in accumulated.items():
                 if key.startswith("log."):
                     metrics[key.replace("log.", "")] = mean(value)
@@ -283,16 +356,22 @@ class EncoderDecoder(LightningModule):
 
         return metrics
 
-    def on_validation_epoch_end(self, outputs): # Changed for updating "pytorch_lightning" - James
-        metrics = self.validation_test_shared_preparation(outputs, self.config.dev_score_file)
+    def on_validation_epoch_end(
+        self, outputs
+    ):  # Changed for updating "pytorch_lightning" - James
+        metrics = self.validation_test_shared_preparation(
+            outputs, self.config.dev_score_file
+        )
 
         # Consider best validation performance based on AUC
-        relevant_metrics = ['AUC']
+        relevant_metrics = ["AUC"]
         eval_model_metric = [metrics.get(m, -1) for m in relevant_metrics]
         if eval_model_metric > self.best_eval_model_metric:
             self.best_eval_model_metric = eval_model_metric
             self.best_eval_global_step = self.global_step
-            print(f"Stored new best metric {relevant_metrics} with values {eval_model_metric} at step {self.global_step}.")
+            print(
+                f"Stored new best metric {relevant_metrics} with values {eval_model_metric} at step {self.global_step}."
+            )
 
         self.save_model()
         return metrics
@@ -302,7 +381,9 @@ class EncoderDecoder(LightningModule):
         return batch_output
 
     def test_epoch_end(self, outputs):
-        metrics = self.validation_test_shared_preparation(outputs, self.config.test_score_file)
+        metrics = self.validation_test_shared_preparation(
+            outputs, self.config.test_score_file
+        )
         return metrics
 
     def configure_optimizers(self):
@@ -324,8 +405,12 @@ class EncoderDecoder(LightningModule):
 
     def on_test_start(self):
         # Evaluate model on best metric if training set exists
-        model_fname = os.path.join(self.config.exp_dir, f"global_step{self.best_eval_global_step}.pt")
-        print(f"Tested on best model step {self.best_eval_global_step} (global_step{self.best_eval_global_step}.pt)")
+        model_fname = os.path.join(
+            self.config.exp_dir, f"global_step{self.best_eval_global_step}.pt"
+        )
+        print(
+            f"Tested on best model step {self.best_eval_global_step} (global_step{self.best_eval_global_step}.pt)"
+        )
         self.config.load_weight = model_fname
         self.load_model()
 
@@ -340,22 +425,16 @@ class EncoderDecoder(LightningModule):
             ), f"Load model failed, unexpected keys {load_result.unexpected_keys.__str__()}"
 
     def save_model(self, finish=False):
-        if self.config.save_model and (finish or self._last_global_step_saved != self.global_step):
+        if self.config.save_model and (
+            finish or self._last_global_step_saved != self.global_step
+        ):
             if finish:
                 model_fname = os.path.join(self.config.exp_dir, "finish.pt")
             else:
-                model_fname = os.path.join(self.config.exp_dir, f"global_step{self.global_step}.pt")
+                model_fname = os.path.join(
+                    self.config.exp_dir, f"global_step{self.global_step}.pt"
+                )
 
-            # if self.use_deepspeed or self.use_ddp:
-            #     distributed_save_path = os.path.join(self.config.exp_dir, "saved_model")
-            #     self.trainer.model.save_checkpoint(distributed_save_path)
-            #     torch.distributed.barrier()
-            #     if dist.get_rank() == 0:
-            #         trainable_states = zero_to_fp32.get_fp32_state_dict_from_zero_checkpoint(distributed_save_path)
-            #         prefix_length = len("module.model.")
-            #         trainable_states = {k[prefix_length:]: v for k, v in trainable_states.items()}
-            #         torch.save(trainable_states, model_fname)
-            # else:
             trainable_states = {
                 param_name: param_weight.cpu()
                 for param_name, param_weight in self.model.state_dict().items()
@@ -364,7 +443,3 @@ class EncoderDecoder(LightningModule):
             torch.save(trainable_states, model_fname)
 
             self._last_global_step_saved = self.global_step
-
-    # def on_before_optimizer_step(self, optimizer, optimizer_idx):
-    #     if self.config.fishmask_mode is not None:
-    #         fishmask_plugin_on_optimizer_step(self)

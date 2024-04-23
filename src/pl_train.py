@@ -2,23 +2,34 @@ import os
 import torch
 import argparse
 from datetime import datetime
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+from transformers import (
+    AutoTokenizer,
+    AutoModelForSeq2SeqLM,
+    T5Tokenizer,
+    T5ForConditionalGeneration,
+)
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from src.data import FinetuneDataModule, get_dataset_reader
 from src.models.EncoderDecoder import EncoderDecoder
+
 # from src.models.modify_model import modify_transformer
 from src.utils.Config import Config
 from src.utils.util import ParseKwargs, set_seeds
 
 
 def get_transformer(config):
-    tokenizer = AutoTokenizer.from_pretrained(config.origin_model)
-    model = AutoModelForSeq2SeqLM.from_pretrained(config.origin_model, low_cpu_mem_usage=True)
+    tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
+    model = T5ForConditionalGeneration.from_pretrained(
+        "google/flan-t5-small", device_map="auto", load_in_8bit=True
+    )
+
+    # tokenizer = AutoTokenizer.from_pretrained(config.origin_model)
+    # model = AutoModelForSeq2SeqLM.from_pretrained(config.origin_model, low_cpu_mem_usage=True)
 
     tokenizer.model_max_length = config.max_seq_len
-    # model = modify_transformer(model, config)
+
     return tokenizer, model
 
 
@@ -39,11 +50,13 @@ def main(config):
 
     trainer = Trainer(
         enable_checkpointing=False,
-        devices=torch.cuda.device_count(), # Changed for updating "pytorch_lightning"
-        accelerator="gpu", # Changed for updating "pytorch_lightning"
+        devices=torch.cuda.device_count(),  # Changed for updating "pytorch_lightning"
+        accelerator="gpu",  # Changed for updating "pytorch_lightning"
         precision=config.compute_precision,
         # amp_backend="native", # Changed for updating "pytorch_lightning"
-        strategy=config.compute_strategy if config.compute_strategy != "none" else "auto", # Changed for updating "pytorch_lightning"
+        strategy=(
+            config.compute_strategy if config.compute_strategy != "none" else "auto"
+        ),  # Changed for updating "pytorch_lightning"
         logger=logger,
         log_every_n_steps=4,
         max_steps=config.num_steps,

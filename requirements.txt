@@ -1,7 +1,10 @@
 # Colab uses 12.2, python 10
 
-datasets==2.0.0
-pytorch-lightning==1.5.8
+# datasets==2.0.0
+# pytorch-lightning==1.5.8
+
+datasets
+pytorch-lightning
 promptsource
 
 # torch==1.10.1+cu122

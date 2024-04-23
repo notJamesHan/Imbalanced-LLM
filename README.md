@@ -14,6 +14,11 @@ Classification of Imbalanced Data with LLM
 - Credit Card: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
 - Heart Attack: https://www.kaggle.com/datasets/rashikrahmanpritom/heart-attack-analysis-prediction-dataset
 
+## TabLLM needed packages
+- Datasets
+- Datasets-serialized
+- pretrained_checkpoints (Not using, if using T0_3b, turn on load_model() and add file)
+
 ## Solve Error
 
 1. use python3.8 for t-few conda env
