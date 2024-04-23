@@ -15,14 +15,14 @@ cuda_device=0
 num_steps=0
 eval_epoch_interval=0
 
-for model in 't03b' # 't03b'
+for model in 't5' # 't03b'
 do
   # For zero-shot set to '0', for all to 'all'
   for num_shot in 4
   do
     # Datasets: car, income, heart, diabetes, jungle, bank, blood, calhousing, creditg, jungle
     # Run all serializations for car
-    for dataset in diabetes
+    for dataset in heart
     do
       # Zero-shot
       # eval_before_training=True

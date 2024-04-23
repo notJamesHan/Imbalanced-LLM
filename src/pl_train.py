@@ -8,8 +8,8 @@ from transformers import (
     T5Tokenizer,
     T5ForConditionalGeneration,
 )
-from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import TensorBoardLogger
+from lightning import Trainer
+from lightning.pytorch import loggers as pl_loggers
 
 from src.data import FinetuneDataModule, get_dataset_reader
 from src.models.EncoderDecoder import EncoderDecoder
@@ -20,6 +20,7 @@ from src.utils.util import ParseKwargs, set_seeds
 
 
 def get_transformer(config):
+    # Using T5 on force - James
     tokenizer = T5Tokenizer.from_pretrained("google/flan-t5-small")
     model = T5ForConditionalGeneration.from_pretrained(
         "google/flan-t5-small", device_map="auto", load_in_8bit=True
@@ -46,7 +47,7 @@ def main(config):
 
     datamodule = FinetuneDataModule(config, tokenizer, dataset_reader)
     model = EncoderDecoder(config, tokenizer, model, dataset_reader)
-    logger = TensorBoardLogger(config.exp_dir, name="log")
+    logger = pl_loggers.TensorBoardLogger(config.exp_dir, name="log")
 
     trainer = Trainer(
         enable_checkpointing=False,

@@ -13,12 +13,12 @@ from datasets import (
     Dataset,
 )
 from promptsource.templates import DatasetTemplates
-import pkg_resources
-from promptsource import templates
-import csv
-from typing import Dict, List, Optional, Tuple
-import re
-import pandas as pd
+# import pkg_resources
+# from promptsource import templates
+# import csv
+# from typing import Dict, List, Optional, Tuple
+# import re
+# import pandas as pd
 from sklearn.metrics import roc_auc_score, precision_recall_curve, auc, f1_score
 
 templates_for_custom_tasks = {

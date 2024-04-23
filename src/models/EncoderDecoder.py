@@ -3,13 +3,13 @@ import json
 import torch
 import torch.nn.functional as F
 import torch.distributed as dist
-from pytorch_lightning import LightningModule
+import lightning as L
 from src.utils.get_optimizer import get_optimizer
 from src.utils.get_scheduler import get_scheduler
 from statistics import mean
 
 
-class EncoderDecoder(LightningModule):
+class EncoderDecoder(L.LightningModule):
     """
     Encoder Decoder
     """
@@ -30,6 +30,11 @@ class EncoderDecoder(LightningModule):
 
         self.best_eval_model_metric = [-1]
         self.best_eval_global_step = -1
+
+        self.training_step_outputs = []   # save outputs in each batch to compute metric overall epoch
+        self.training_step_targets = []   # save targets in each batch to compute metric overall epoch
+        self.val_step_outputs = []        # save outputs in each batch to compute metric overall epoch
+        self.val_step_targets = []        # save targets in each batch to compute metric overall epoch
 
     def training_step(self, batch, batch_idx):
 
@@ -72,6 +77,9 @@ class EncoderDecoder(LightningModule):
                 decoder_input_ids=decoder_input_ids,
                 decoder_attention_mask=decoder_attention_mask,
             )
+            print("I am here 1")
+
+            model_output.logits.requires_grad = True # Requires GRAD - James
             choices_scores = (
                 F.cross_entropy(
                     model_output.logits.flatten(0, 1),
@@ -87,6 +95,7 @@ class EncoderDecoder(LightningModule):
                     (choices_ids != self.tokenizer.pad_token_id).sum(dim=-1),
                     self.config.length_norm,
                 )
+            print("I am here 2")
             lm_loss = F.cross_entropy(
                 model_output.logits.view(
                     bs, num_choices, *model_output.logits.size()[1:]
@@ -97,12 +106,14 @@ class EncoderDecoder(LightningModule):
             tensorboard_logs = {"lm_loss": lm_loss.item()}
             # I think mc loss corresponds to the LN-loss which is a softmax-cross entropy loss for length normalized
             # output sequences
+            print("I am here 3")
             if self.config.mc_loss > 0:
                 mc_loss = F.cross_entropy(-choices_scores, labels)
                 tensorboard_logs["mc_loss"] = mc_loss.item()
             else:
                 mc_loss = 0.0
 
+            print("I am here 4")
             if self.config.unlikely_loss > 0:
                 cand_loglikely = -F.cross_entropy(
                     model_output.logits.flatten(0, 1),
@@ -148,11 +159,15 @@ class EncoderDecoder(LightningModule):
             loss = model_output.loss
             tensorboard_logs = {"loss": loss.item()}
 
-        if not (self.use_deepspeed or self.use_ddp) or dist.get_rank() == 0:
-            self.log_dict(tensorboard_logs)
+        # if not (self.use_deepspeed or self.use_ddp) or dist.get_rank() == 0:
+        self.log_dict(tensorboard_logs)
 
         if self.global_step % self.config.save_step_interval == 0:
             self.save_model()
+
+        # --> HERE STEP 2 <--
+        self.training_step_outputs.extend(y_pred)
+        self.training_step_targets.extend(y_true)
 
         return loss
 
@@ -203,6 +218,8 @@ class EncoderDecoder(LightningModule):
                 decoder_input_ids=decoder_input_ids,
                 decoder_attention_mask=decoder_attention_mask,
             )
+            print("I am here 5")
+            model_output.logits.requires_grad = True # Requires GRAD - James
             choices_scores = (
                 F.cross_entropy(
                     model_output.logits.flatten(0, 1),
@@ -274,6 +291,8 @@ class EncoderDecoder(LightningModule):
                     decoder_input_ids=decoder_input_ids,
                     decoder_attention_mask=decoder_attention_mask,
                 )
+                print("I am here 6")
+                model_output.logits.requires_grad = True # Requires GRAD - James
                 choices_scores = (
                     F.cross_entropy(
                         model_output.logits.flatten(0, 1),
@@ -323,42 +342,46 @@ class EncoderDecoder(LightningModule):
 
     def validation_test_shared_preparation(self, outputs, output_file):
 
-        if not (self.use_deepspeed or self.use_ddp) or dist.get_rank() == 0:
-            # let rank 0 collect all outputs
-            accumulated = {key: [] for key in outputs[0].keys()}
-            for batch_output in outputs:
-                for key, value in batch_output.items():
-                    accumulated[key].extend(value)
+        # if not (self.use_deepspeed or self.use_ddp) or dist.get_rank() == 0:
+        # let rank 0 collect all outputs
+        accumulated = {key: [] for key in outputs[0].keys()}
+        for batch_output in outputs:
+            for key, value in batch_output.items():
+                accumulated[key].extend(value)
 
-            # multi-process may yield duplicated examples in the last batch
-            valid_mask = []
-            idx_set = set()
-            for idx in accumulated["idx"]:
-                valid_mask.append(idx not in idx_set)
-                idx_set.add(idx)
-            for key, values in accumulated.items():
-                accumulated[key] = [v for v, m in zip(values, valid_mask) if m]
+        # multi-process may yield duplicated examples in the last batch
+        valid_mask = []
+        idx_set = set()
+        for idx in accumulated["idx"]:
+            valid_mask.append(idx not in idx_set)
+            idx_set.add(idx)
+        for key, values in accumulated.items():
+            accumulated[key] = [v for v, m in zip(values, valid_mask) if m]
 
-            # compute and log results
-            metrics = self.dataset_reader.compute_metric(accumulated)
-            # Append number of best steps to metrics
-            metrics = {**metrics, "num_steps": self.best_eval_global_step}
-            for key, value in accumulated.items():
-                if key.startswith("log."):
-                    metrics[key.replace("log.", "")] = mean(value)
+        # compute and log results
+        metrics = self.dataset_reader.compute_metric(accumulated)
+        # Append number of best steps to metrics
+        metrics = {**metrics, "num_steps": self.best_eval_global_step}
+        for key, value in accumulated.items():
+            if key.startswith("log."):
+                metrics[key.replace("log.", "")] = mean(value)
 
-            result_str = json.dumps(metrics) + "\n"
-            with open(output_file, "a+") as f:
-                f.write(result_str)
-            print("\n" + result_str)
-        else:
-            metrics = {}
+        result_str = json.dumps(metrics) + "\n"
+        with open(output_file, "a+") as f:
+            f.write(result_str)
+        print("\n" + result_str)
+        # else:
+        #     metrics = {}
 
         return metrics
 
-    def on_validation_epoch_end(
-        self, outputs
-    ):  # Changed for updating "pytorch_lightning" - James
+    def on_validation_epoch_end(self):  
+        
+        ## F1 Macro all epoch saving outputs and target per batch
+        val_all_outputs = self.val_step_outputs
+        val_all_targets = self.val_step_targets
+
+        # Changed for updating "pytorch_lightning" - James
         metrics = self.validation_test_shared_preparation(
             outputs, self.config.dev_score_file
         )
@@ -374,6 +397,11 @@ class EncoderDecoder(LightningModule):
             )
 
         self.save_model()
+
+        # free up the memory
+        # --> HERE STEP 3 <--
+        self.val_step_outputs.clear()
+        self.val_step_targets.clear()
         return metrics
 
     def test_step(self, batch, batch_idx):
@@ -399,9 +427,6 @@ class EncoderDecoder(LightningModule):
 
     def on_train_end(self):
         self.save_model(finish=True)
-
-        # if self.config.fishmask_mode is not None:
-        #     fishmask_plugin_on_end(self)
 
     def on_test_start(self):
         # Evaluate model on best metric if training set exists

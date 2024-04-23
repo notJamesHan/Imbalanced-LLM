@@ -1,4 +1,4 @@
-import torch.optim as optim
+# import torch.optim as optim
 from transformers import Adafactor
 import re
 from collections import defaultdict
@@ -31,22 +31,22 @@ def get_optimizer(model, config):
             param.requires_grad = False
 
     param_groups = param_groups.values()
-    if optim_name.lower() == "adam":
-        optimizer = optim.Adam(param_groups, lr=config.lr)
-    elif optim_name.lower() == "sgd":
-        optimizer = optim.SGD(param_groups, lr=config.lr, weight_decay=config.weight_decay)
-    elif optim_name.lower() == "adamw":
-        optimizer = optim.AdamW(param_groups, lr=config.lr, weight_decay=config.weight_decay, eps=1e-8)
-    elif optim_name.lower() == "adafactor":
-        optimizer = Adafactor(
-            param_groups,
-            lr=config.lr,
-            weight_decay=config.weight_decay,
-            scale_parameter=config.scale_parameter,
-            relative_step=False,
-            warmup_init=False,
-        )
-    else:
-        raise ValueError("Invalid Optimizer name %s" % optim_name)
-
+    # if optim_name.lower() == "adam":
+    #     optimizer = optim.Adam(param_groups, lr=config.lr)
+    # elif optim_name.lower() == "sgd":
+    #     optimizer = optim.SGD(param_groups, lr=config.lr, weight_decay=config.weight_decay)
+    # elif optim_name.lower() == "adamw":
+    #     optimizer = optim.AdamW(param_groups, lr=config.lr, weight_decay=config.weight_decay, eps=1e-8)
+    # elif optim_name.lower() == "adafactor":
+    optimizer = Adafactor(
+        model.parameters(),
+        lr=config.lr,
+        weight_decay=config.weight_decay,
+        scale_parameter=config.scale_parameter,
+        relative_step=False,
+        warmup_init=False,
+    )
+    # else:
+    #     raise ValueError("Invalid Optimizer name %s" % optim_name)
+    print("Get Optimizer")
     return optimizer, trainable_param_names

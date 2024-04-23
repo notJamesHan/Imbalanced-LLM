@@ -1,11 +1,11 @@
 import torch
 import numpy as np
-from pytorch_lightning import LightningDataModule
+import lightning as L
 
 from src.data.dataset_readers import is_custom_task
 
 
-class FinetuneDataModule(LightningDataModule):
+class FinetuneDataModule(L.LightningDataModule):
     def __init__(self, config, tokenizer, dataset_reader):
         super().__init__()
         self.config = config

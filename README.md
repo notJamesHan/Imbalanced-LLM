@@ -47,3 +47,7 @@ pip install --use-deprecated=legacy-resolver  -r requirements.txt
 # If promptsource failed
 !pip install git+https://github.com/bigscience-workshop/promptsource.git
 ```
+
+## TODO
+- TypeError: EncoderDecoder.on_validation_epoch_end() missing 1 required positional argument: 'outputs'
+- Open Log
