@@ -8,3 +8,5 @@
 /datasets_serialized
 /src/pretrained_checkpoints
 /rawDraft
+
+/exp_out

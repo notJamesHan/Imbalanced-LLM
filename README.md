@@ -51,3 +51,8 @@ pip install --use-deprecated=legacy-resolver  -r requirements.txt
 ## TODO
 - TypeError: EncoderDecoder.on_validation_epoch_end() missing 1 required positional argument: 'outputs'
 - Open Log
+
+
+## TEST
+For heart dataset
+- `python src/scripts/get_result_table.py -e t5_\* -d heart`
