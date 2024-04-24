@@ -1,8 +1,7 @@
 from glob import glob
 import json
 from collections import defaultdict
-from scipy.stats import iqr
-from numpy import median, mean, std
+from numpy import mean, std
 import os
 import argparse
 

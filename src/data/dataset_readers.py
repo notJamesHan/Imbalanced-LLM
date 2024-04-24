@@ -13,12 +13,7 @@ from datasets import (
     Dataset,
 )
 from promptsource.templates import DatasetTemplates
-# import pkg_resources
-# from promptsource import templates
-# import csv
-# from typing import Dict, List, Optional, Tuple
-# import re
-# import pandas as pd
+
 from sklearn.metrics import roc_auc_score, precision_recall_curve, auc, f1_score
 
 templates_for_custom_tasks = {
@@ -46,34 +41,6 @@ def get_dataset_reader(config):
 
 
 DATASETS_OFFLINE = "./datasets_serialized"
-MAX_EXAMPLES_PER_DATASET = 500_000
-TASK_BLACKLIST = [
-    # Tasks which often tokenize to > 1024 tokens currently
-    "hotpot_qa_distractor_Generate_Explanations",
-    "hotpot_qa_fullwiki_Generate_Explanations",
-    "hotpot_qa_distractor_Generate_Answer_and_Explanations",
-    "hotpot_qa_fullwiki_Generate_Answer_and_Explanations",
-    "hotpot_qa_fullwiki_Generate_Answer",
-    "hotpot_qa_distractor_Generate_Answer",
-    "hotpot_qa_distractor_Generate_Title_2",
-    "hotpot_qa_fullwiki_Generate_Title_2",
-    "hotpot_qa_fullwiki_Generate_Title_1",
-    "hotpot_qa_distractor_Generate_Title_1",
-    "hotpot_qa_distractor_Generate_Question",
-    "hotpot_qa_fullwiki_Generate_Question",
-    "tab_fact_tab_fact_tab_fact_3",
-    "tab_fact_tab_fact_tab_fact_2",
-    "tab_fact_tab_fact_tab_fact_1",
-    "tab_fact_tab_fact_tab_fact_7",
-    "tab_fact_tab_fact_tab_fact_4",
-    "tab_fact_tab_fact_tab_fact_5",
-    "tab_fact_tab_fact_tab_fact_6",
-    "wiki_hop_masked_Choose_Best_Object_Candidate",
-    "wiki_hop_masked_Indirect_Question_about_Birthplace_Citizenship_Place_of_Death",
-    "narrativeqa_Template_05",
-    "ecthr_cases_alleged_violation_prediction_silver_rationales",
-    "gigaword_summarize_",
-]
 
 
 class BaseDatasetReader(object):

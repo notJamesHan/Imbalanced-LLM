@@ -14,7 +14,6 @@ from lightning.pytorch import loggers as pl_loggers
 from src.data import FinetuneDataModule, get_dataset_reader
 from src.models.EncoderDecoder import EncoderDecoder
 
-# from src.models.modify_model import modify_transformer
 from src.utils.Config import Config
 from src.utils.util import ParseKwargs, set_seeds
 

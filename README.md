@@ -1,58 +1,27 @@
 # Imbalanced-LLM
 
-Classification of Imbalanced Data with LLM
+Classification of Imbalanced Data with LLM (Large Language Model)
+
+This project code uses [TabLLM](https://github.com/clinicalml/TabLLM) and [T-few](https://github.com/r-three/t-few) project and its paper.
+
+As an Undergraduate Researcher, I did not had the luxury to have over 30GB GPU, and did not want to spend money on Colab. So I had to modify lots of code and versionings to make it work on free tier Colab, and even locally with smaller LLMs.
+
+## Version
+- This code is ran on Google Colab Free Tier. It will follow those versions.
 
 ## Folders
 
-- `old/brev`: Tried to follow [this youtube tutorial](https://youtu.be/ztPoCymwIp0?feature=shared) to fine tune LLM.
-- `old/setfit`: Tried to use [setfit](https://github.com/huggingface/setfit), created by Hugging Face.
-  
+- `/.old`: Old attempt for Imbalanced LLM. Testing Idea.
+- `/bin`: Shell code to run the project
+- `/configs`: Configuration Data, related to `/src/utils/Config.py`
+- `/Datasets`: Raw csv datasets (Not included, go to [TabLLM Project](https://github.com/clinicalml/TabLLM))
+- `/Datasets-serialized`: Serialized datasets (Not included, go to [TabLLM Project](https://github.com/clinicalml/TabLLM))
+- `/exp_out`: Your Train result (Not included)
+- `/pretrained_checkpoints`: Saved Model (Not included)
+  -  If using model T0 or T0_3b, get the file from [TabLLM Project](https://github.com/clinicalml/TabLLM), turn on `load_model()` in `EncoderDecoder()`  and add file
+- `/src`: Your Source
+- `/templates`:
 
-## Datasets
->  I have not included the dataset due to the file size.
-
-- Credit Card: https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
-- Heart Attack: https://www.kaggle.com/datasets/rashikrahmanpritom/heart-attack-analysis-prediction-dataset
-
-## TabLLM needed packages
-- Datasets
-- Datasets-serialized
-- pretrained_checkpoints (Not using, if using T0_3b, turn on load_model() and add file)
-
-## Solve Error
-
-1. use python3.8 for t-few conda env
-2. Run this in Linux
-3. pip install --upgrade "protobuf<=3.20.1"
-4. Download HuggingFace Cli to use the Token
-
-`AttributeError: module 'distutils' has no attribute 'version'`
-5. [Fix](https://github.com/pytorch/pytorch/issues/69894#issuecomment-1080635462)
-6. `pip install typing-extensions` dropped support for 3.8, use 3.10
-
-
-## This is for colab based.
-```
-conda create -n tfew python==3.10
-conda activate tfew
-
-pip install fsspec==2021.05.0 # exists in colab
-pip install urllib3==1.26.6 # exists in colab
-pip install importlib-metadata==4.13.0 # exists in colab
-pip install scikit-learn # exists in colab 
-
-pip install --use-deprecated=legacy-resolver  -r requirements.txt
-
-
-# If promptsource failed
-!pip install git+https://github.com/bigscience-workshop/promptsource.git
-```
-
-## TODO
-- TypeError: EncoderDecoder.on_validation_epoch_end() missing 1 required positional argument: 'outputs'
-- Open Log
-
-
-## TEST
+## Testing
 For heart dataset
 - `python src/scripts/get_result_table.py -e t5_\* -d heart`

@@ -2,7 +2,6 @@ import os
 import json
 import torch
 import torch.nn.functional as F
-import torch.distributed as dist
 import lightning as L
 from src.utils.get_optimizer import get_optimizer
 from src.utils.get_scheduler import get_scheduler

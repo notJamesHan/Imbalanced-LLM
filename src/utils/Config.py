@@ -83,7 +83,9 @@ class Config(object):
         self.lowrank_adapter_rank = 1
         self.compacter_hypercomplex_division = 8
         self.compacter_learn_phm = True
-        self.compacter_hypercomplex_nonlinearity = "glorot-uniform"  # wait, is this really the right name?
+        self.compacter_hypercomplex_nonlinearity = (
+            "glorot-uniform"  # wait, is this really the right name?
+        )
         self.compacter_shared_phm_rule = False
         self.compacter_factorized_phm = False
         self.compacter_shared_W_phm = False
@@ -113,7 +115,9 @@ class Config(object):
         if filenames:
             for filename in filenames.split("+"):
                 if not os.path.exists(filename):
-                    filename = os.path.join(os.getenv("CONFIG_PATH", default="configs"), filename)
+                    filename = os.path.join(
+                        os.getenv("CONFIG_PATH", default="configs"), filename
+                    )
 
                 self.update_kwargs(json.load(open(filename)), eval=False)
         if kwargs:
@@ -122,7 +126,7 @@ class Config(object):
         self.set_exp_dir()
 
     def update_kwargs(self, kwargs, eval=True):
-        for (k, v) in kwargs.items():
+        for k, v in kwargs.items():
             if eval:
                 try:
                     v = ast.literal_eval(v)
@@ -140,7 +144,9 @@ class Config(object):
         """
 
         if self.exp_name is not None:
-            self.exp_dir = os.path.join(os.getenv("OUTPUT_PATH", default="exp_out"), self.exp_name)
+            self.exp_dir = os.path.join(
+                os.getenv("OUTPUT_PATH", default="exp_out"), self.exp_name
+            )
         else:
             self.exp_dir = os.getenv("OUTPUT_PATH", default="exp_out")
         if not os.path.exists(self.exp_dir):

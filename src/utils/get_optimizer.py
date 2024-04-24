@@ -12,7 +12,7 @@ def get_optimizer(model, config):
     :param config:
     :return:
     """
-    optim_name = config.optimizer
+    # optim_name = config.optimizer
 
     def param_name_to_group_name(param_name):
         if False:
@@ -23,7 +23,7 @@ def get_optimizer(model, config):
 
     param_groups = defaultdict(lambda: {"params": []})
     trainable_param_names = set()
-    for (param_name, param) in model.named_parameters():
+    for param_name, param in model.named_parameters():
         if re.fullmatch(config.trainable_param_names, param_name):
             param_groups[param_name_to_group_name(param_name)]["params"].append(param)
             trainable_param_names.add(param_name)
@@ -31,6 +31,8 @@ def get_optimizer(model, config):
             param.requires_grad = False
 
     param_groups = param_groups.values()
+
+    # Forcefully using optimizer Adafactor - James
     # if optim_name.lower() == "adam":
     #     optimizer = optim.Adam(param_groups, lr=config.lr)
     # elif optim_name.lower() == "sgd":
@@ -48,5 +50,5 @@ def get_optimizer(model, config):
     )
     # else:
     #     raise ValueError("Invalid Optimizer name %s" % optim_name)
-    print("Get Optimizer")
+
     return optimizer, trainable_param_names
