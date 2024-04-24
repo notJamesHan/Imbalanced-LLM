@@ -23,5 +23,9 @@ As an Undergraduate Researcher, I did not had the luxury to have over 30GB GPU, 
 - `/templates`:
 
 ## Testing
+```
+create_external_datasets.py --dataset (car|income|diabetes|heart|bank|blood|calhousing|creditg|jungle) (--list) (--list (--tabletotext|--t0serialization|--values|--permuted|--shuffled))
+```
+
 For heart dataset
 - `python src/scripts/get_result_table.py -e t5_\* -d heart`
