@@ -13,6 +13,7 @@ from lightning.pytorch import loggers as pl_loggers
 
 from src.data import FinetuneDataModule, get_dataset_reader
 from src.models.EncoderDecoder import EncoderDecoder
+from src.models.modify_model import modify_transformer
 
 from src.utils.Config import Config
 from src.utils.util import ParseKwargs, set_seeds
@@ -29,6 +30,7 @@ def get_transformer(config):
     # model = AutoModelForSeq2SeqLM.from_pretrained(config.origin_model, low_cpu_mem_usage=True)
 
     tokenizer.model_max_length = config.max_seq_len
+    model = modify_transformer(model, config)
 
     return tokenizer, model
 

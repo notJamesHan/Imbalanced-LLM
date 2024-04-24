@@ -75,7 +75,7 @@ class EncoderDecoder(L.LightningModule):
                 decoder_attention_mask=decoder_attention_mask,
             )
 
-            model_output.logits.requires_grad = True  # Requires GRAD - James
+            #model_output.logits.requires_grad = True  # Requires GRAD - James (Needed if not using LoRA)
             choices_scores = (
                 F.cross_entropy(
                     model_output.logits.flatten(0, 1),
@@ -210,7 +210,7 @@ class EncoderDecoder(L.LightningModule):
                 decoder_attention_mask=decoder_attention_mask,
             )
 
-            model_output.logits.requires_grad = True  # Requires GRAD - James
+            model_output.logits.requires_grad = True  # Requires GRAD - James (Needed if not using LoRA)
             choices_scores = (
                 F.cross_entropy(
                     model_output.logits.flatten(0, 1),
@@ -283,7 +283,7 @@ class EncoderDecoder(L.LightningModule):
                     decoder_attention_mask=decoder_attention_mask,
                 )
 
-                model_output.logits.requires_grad = True  # Requires GRAD - James
+                model_output.logits.requires_grad = True  # Requires GRAD - James (Needed if not using LoRA)
                 choices_scores = (
                     F.cross_entropy(
                         model_output.logits.flatten(0, 1),
