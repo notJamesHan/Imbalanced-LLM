@@ -10,6 +10,7 @@ If there are questions, please leave an issue on github to talk more about it, o
 
 ## Version
 - This code is ran on Google Colab Free Tier. It will follow those versions.
+- Used Python Black Formatter
 
 ## Folders
 
