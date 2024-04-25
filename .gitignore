@@ -1,2 +1,12 @@
 /setfit-bge-small-v1.5-sst2-8-shot
 .DS_Store
+
+# Please add through TabLLM Code.
+*/datasets
+*/datasets_serialized
+/datasets
+/datasets_serialized
+/src/pretrained_checkpoints
+/rawDraft
+
+/exp_out
