@@ -22,7 +22,10 @@ As an Undergraduate Researcher, I did not had the luxury to have over 30GB GPU, 
 - `/src`: Your Source
 - `/templates`:
 
-## Testing
+# Testing
+## Dataset
+[stroke-prediction-dataset/data](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset/data)
+
 ```
 create_external_datasets.py --dataset (car|income|diabetes|heart|bank|blood|calhousing|creditg|jungle) (--list) (--list (--tabletotext|--t0serialization|--values|--permuted|--shuffled))
 ```
