@@ -6,6 +6,8 @@ This project code uses [TabLLM](https://github.com/clinicalml/TabLLM) and [T-few
 
 As an Undergraduate Researcher, I did not had the luxury to have over 30GB GPU, and did not want to spend money on Colab. So I had to modify lots of code and versionings to make it work on free tier Colab, and even locally with smaller LLMs.
 
+If there are questions, please leave an issue on github to talk more about it, or email me at contactjameshan@gmail.com
+
 ## Version
 - This code is ran on Google Colab Free Tier. It will follow those versions.
 
@@ -23,12 +25,20 @@ As an Undergraduate Researcher, I did not had the luxury to have over 30GB GPU, 
 - `/templates`:
 
 # Testing
+> This tutorial is modified from [TabLLM Project](https://github.com/clinicalml/TabLLM).
+
+We will use Google Colab Free Tier to run.
 ## Dataset
 [stroke-prediction-dataset/data](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset/data)
 
-```
-create_external_datasets.py --dataset (car|income|diabetes|heart|bank|blood|calhousing|creditg|jungle) (--list) (--list (--tabletotext|--t0serialization|--values|--permuted|--shuffled))
-```
+## Serialize Dataset
+- Run Make_Datset.ipynb
+Or
+- `create_external_datasets.py --dataset stroke`
 
-For heart dataset
-- `python src/scripts/get_result_table.py -e t5_\* -d heart`
+## Train/Fine Tune
+- Run TabLLM.ipynb
+
+## Get Result
+> For Stroke Dataset
+- `python src/scripts/get_result_table.py -e t5_\* -d stroke`
