@@ -22,7 +22,7 @@ do
   do
     # Datasets: car, income, heart, diabetes, jungle, bank, blood, calhousing, creditg, jungle
     # Run all serializations for car
-    for dataset in heart
+    for dataset in stroke
     do
       # Zero-shot
       # eval_before_training=True
@@ -60,6 +60,9 @@ do
         fi
         if [[ $dataset = *"jungle"* ]]; then
           num_steps=270000
+        fi
+        if [[ $dataset = *"stroke"* ]]; then
+          num_steps=6000
         fi
       fi
 

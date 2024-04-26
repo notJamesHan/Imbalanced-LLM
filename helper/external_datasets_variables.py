@@ -1,4 +1,46 @@
 ########################################################################################################################
+# stroke
+########################################################################################################################
+# Used descriptions from: https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset/data
+
+work_type_lists = {
+    'children': 'is a child',
+    'Govt_job': 'has a government job',
+    'Never_worked': 'never worked at a job',
+    'Private': 'has a private job',
+    'Self-employed': 'is self employed'
+}
+smoking_status_lists = {
+    'formerly smoked': 'has formerly smoked',
+    'never smoked': 'has never smoked',
+    'smokes': 'smokes',
+    'Unknown': 'smoking status is not available',
+}
+
+template_config_stroke = {
+    'pre': {
+        'hypertension': lambda x: 'have' if x == 1 else 'does not have',
+        'heart_disease': lambda x: 'have' if x == 1 else 'does not have',
+        'ever_married': lambda x: 'has married' if x == "Yes" else 'never married',
+        'work_type': lambda x: work_type_lists[x],
+        'Residence_type': lambda x: 'rural' if x == "Rural" else 'urban',
+        'smoking_status': lambda x: smoking_status_lists[x],
+    }
+}
+
+# doesn\'t have, have
+template_stroke = 'The Age of the patient is ${age}. ' \
+                 'The Gender of the patient is ${gender}. ' \
+                 'The patient ${hypertension} hypertension. ' \
+                 'The patient ${heart_disease} heart disease. ' \
+                 'The patient ${ever_married}. ' \
+                 'The patient ${work_type}. ' \
+                 'The patient resides in a ${Residence_type} area. ' \
+                 'The average glucose level in blood is ${avg_glucose_level}. ' \
+                 'The body mass index is ${bmi}. ' \
+                 'The patient ${smoking_status}. ' \
+
+########################################################################################################################
 # heart
 ########################################################################################################################
 # Used descriptions from: https://www.kaggle.com/code/azizozmen/heart-failure-predict-8-classification-techniques
