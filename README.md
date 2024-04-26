@@ -29,13 +29,17 @@ If there are questions, please leave an issue on github to talk more about it, o
 > This tutorial is modified from [TabLLM Project](https://github.com/clinicalml/TabLLM).
 
 We will use Google Colab Free Tier to run.
-## Dataset
-[stroke-prediction-dataset/data](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset/data)
+## How to add your own Dataset
+For my case, we will use [stroke-prediction-dataset/data](https://www.kaggle.com/datasets/fedesoriano/stroke-prediction-dataset/data)
 
-## Serialize Dataset
+### 1. Serialize Dataset
 - Run Make_Datset.ipynb
 Or
 - `create_external_datasets.py --dataset stroke`
+### 2. Add files
+- Go to `evaluate_external_dataset` and add your dataset name on `args_datasets` variable
+- Make a new file called `template_<datasetName>` on `templates` folder. Use other templates as reference.
+- Go to `bin/few-shot-pretrained-100k.sh` and add your dataset on `for dataset in <dataSetName>`
 
 ## Train/Fine Tune
 - Run TabLLM.ipynb

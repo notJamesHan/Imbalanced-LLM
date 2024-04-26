@@ -18,7 +18,7 @@ eval_epoch_interval=0
 for model in 't5' # 't03b'
 do
   # For zero-shot set to '0', for all to 'all'
-  for num_shot in 4
+  for num_shot in 4 8 16 32 64 128 256 512
   do
     # Datasets: car, income, heart, diabetes, jungle, bank, blood, calhousing, creditg, jungle
     # Run all serializations for car
