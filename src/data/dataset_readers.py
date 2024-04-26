@@ -26,6 +26,7 @@ templates_for_custom_tasks = {
     "blood": "blood",
     "jungle": "jungle",
     "calhousing": "calhousing",
+    "stroke": "stroke"
 }
 
 
